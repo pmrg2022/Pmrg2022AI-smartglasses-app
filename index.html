@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#20232a">
+  <title>Pmrg2022AI Glasses</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">P</div>
+      <div class="brand-copy">
+        <h1>Pmrg2022AI <span>Glasses</span></h1>
+        <p>Voice-first assistant</p>
+      </div>
+      <span class="connection-pill" id="connection-status"><span class="status-dot"></span> Ready</span>
+    </header>
+
+    <section class="device-notice" aria-label="Audio setup">
+      <div class="notice-icon" aria-hidden="true">♫</div>
+      <div>
+        <strong>Audio output</strong>
+        <p>Connect “six-13” in your device’s Bluetooth settings. Responses use your currently selected audio output.</p>
+      </div>
+    </section>
+
+    <section class="conversation" aria-label="Conversation">
+      <div class="welcome" id="welcome">
+        <div class="welcome-mark" aria-hidden="true">P</div>
+        <h2>What can I help with?</h2>
+        <p>Ask a question by typing or using your microphone.</p>
+        <div class="suggestions">
+          <button class="suggestion" type="button" data-prompt="Explain a topic in simple terms.">Explain something</button>
+          <button class="suggestion" type="button" data-prompt="Give me an idea for a small programming project.">Programming idea</button>
+        </div>
+      </div>
+      <div id="chat-container" class="chat-container" aria-live="polite"></div>
+    </section>
+
+    <div class="status-line" id="status-line" role="status">Ready when you are.</div>
+
+    <form class="composer" id="composer">
+      <button class="icon-button mic-button" id="mic-button" type="button" aria-label="Start voice input" title="Voice input">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6"></path></svg>
+      </button>
+      <label class="sr-only" for="message-input">Message Pmrg2022AI</label>
+      <textarea id="message-input" rows="1" placeholder="Message Pmrg2022AI…" autocomplete="off"></textarea>
+      <button class="send-button" id="send-button" type="submit" aria-label="Send message" title="Send">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-5 16-3-6-8-2Z"></path><path d="m12 14 4-5"></path></svg>
+      </button>
+    </form>
+
+    <footer class="footer">
+      <span>Experimental personal project</span>
+      <div class="footer-actions">
+        <button id="repeat-button" type="button">Repeat answer</button>
+        <button id="stop-button" type="button">Stop audio</button>
+        <button id="clear-button" type="button">Clear chat</button>
+      </div>
+    </footer>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
