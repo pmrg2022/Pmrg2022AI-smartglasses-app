@@ -196,23 +196,27 @@ function toggleWakeMode() {
 // Short phrases are checked only against final results to reduce
 // accidental activation while a longer phrase is still being spoken.
 
+
 function findWake(text, isFinal) {
   const value = normalize(text);
   if (!value) return null;
 
-  // Every pattern MUST begin with "hey".
+  // Only activate from a final transcript. Interim results change
+  // repeatedly while Safari is still interpreting the audio.
+  if (!isFinal) return null;
+
   const patterns = [
-    /\bhey\s+pmrg\s+(?:2022|twenty twenty two|twenty two|two zero two two)\s+ai\b/,
-    /\bhey\s+pmrg\s+ai\b/,
-    /\bhey\s+pmrg\b/,
+    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\s+(?:2022|twenty twenty two|twenty two|two zero two two)\s+ai\b/,
+    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\s+ai\b/,
+    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\b/,
     /\bhey\s+p\s*m\b/,
-    /\bhey\s+twenty\s+two\b/,
-    /\bhey\s+twenty\s+two\s+ai\b/
+    /\bhey\s+twenty\s+two\b/
   ];
 
   for (const regex of patterns) {
     const match = regex.exec(value);
-    if (match && (isFinal || match[0].length > 12)) {
+
+    if (match) {
       return {
         index: match.index,
         end: match.index + match[0].length
@@ -220,44 +224,9 @@ function findWake(text, isFinal) {
     }
   }
 
-  // Handle "Hey PMRG2022AI" when the recognizer joins the words.
-  const joined = value.replace(/\s/g, "");
-  const joinedPatterns = [
-    "heypmrg2022ai",
-    "heypmrg2022",
-    "heypmrgtwentytwentytwoai",
-    "heypmrgai",
-    "heypmrg",
-    "heypm",
-    "heytwentytwo"
-  ];
-
-  for (const phrase of joinedPatterns) {
-    const index = joined.indexOf(phrase);
-    if (index !== -1 && isFinal) {
-      // Map the joined-string position back to the original normalized text.
-      let count = 0;
-      let start = -1;
-      let end = -1;
-
-      for (let i = 0; i < value.length; i++) {
-        if (/\s/.test(value[i])) continue;
-        if (count === index) start = i;
-        if (count === index + phrase.length - 1) {
-          end = i + 1;
-          break;
-        }
-        count++;
-      }
-
-      if (start !== -1 && end !== -1) {
-        return { index: start, end };
-      }
-    }
-  }
-
   return null;
 }
+
 
 
 function removeWakePhrase(text, match) {
@@ -450,15 +419,22 @@ function setupRecognition() {
 
 
   
+  
   recognition.onend = () => {
-    logDiagnostic("Recognition ended");
     recognitionRunning = false;
 
     if (wakeEnabled && !speaking && !busy) {
-      setStatus("Speech recognition stopped. Retrying…");
-      scheduleRestart();
+      setStatus("Recognition ended. Restarting…");
+
+      clearTimeout(restartTimer);
+
+      restartTimer = setTimeout(() => {
+        restartTimer = null;
+        startEngine();
+      }, 1000);
     }
   };
+
 
 
 }
