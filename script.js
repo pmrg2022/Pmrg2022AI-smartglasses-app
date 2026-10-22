@@ -75,18 +75,27 @@ function clearTimers() {
   silenceTimer = null;
 }
 
+
 function startEngine() {
   if (!recognition || !wakeEnabled || speaking || busy ||
-      recognitionRunning) return;
+      recognitionRunning) {
+    return;
+  }
 
   try {
     recognition.start();
+    setStatus("Starting speech recognition…");
   } catch (error) {
-    // Safari can briefly remain busy while restarting recognition.
-    console.warn("Recognition start:", error);
+    const detail = error.name || error.message || String(error);
+
+    console.error("Recognition start failed:", error);
+    setStatus("Could not start microphone: " + detail);
+
+    // Safari may still be closing the previous recognition session.
     scheduleRestart();
   }
 }
+
 
 function scheduleRestart() {
   clearTimeout(restartTimer);
@@ -360,8 +369,12 @@ function setupRecognition() {
     );
   };
 
+  
   recognition.onerror = event => {
-    console.error("Speech recognition error:", event.error);
+    const message = "Speech error: " + event.error;
+
+    console.error(message, event);
+    setStatus(message);
 
     if (
       event.error === "not-allowed" ||
@@ -372,15 +385,10 @@ function setupRecognition() {
       micButton.classList.remove("listening");
       micButton.setAttribute("aria-label", "Start wake listening");
       setPill("Permission needed");
-      setStatus(
-        "Safari denied speech recognition. Check microphone and " +
-        "speech-recognition permissions for this website."
-      );
-      return;
+      setStatus(message + ". Check Safari permissions.");
     }
-
-    setStatus("Speech recognition error: " + event.error);
   };
+
 
   
   recognition.onresult = event => {
@@ -410,14 +418,16 @@ function setupRecognition() {
   };
 
 
+  
   recognition.onend = () => {
     recognitionRunning = false;
 
     if (wakeEnabled && !speaking && !busy) {
-      setStatus("Recognition stopped. Restarting microphone…");
+      setStatus("Speech recognition stopped. Retrying…");
       scheduleRestart();
     }
   };
+
 
 }
 
