@@ -36,9 +36,34 @@ function normalize(text) {
     .trim();
 }
 
+
+const diagnosticLog = [];
+
 function setStatus(text) {
   statusLine.textContent = text;
 }
+
+function logDiagnostic(message) {
+  const time = new Date().toLocaleTimeString();
+  diagnosticLog.unshift(`${time} — ${message}`);
+  diagnosticLog.length = Math.min(diagnosticLog.length, 12);
+
+  let panel = document.getElementById("diagnostic-log");
+
+  if (!panel) {
+    panel = document.createElement("pre");
+    panel.id = "diagnostic-log";
+    panel.style.cssText =
+      "white-space:pre-wrap;overflow-wrap:anywhere;" +
+      "font-size:12px;padding:10px;border-radius:8px;" +
+      "background:#202020;color:#ddd;max-height:220px;" +
+      "overflow:auto;margin:8px 0;";
+    statusLine.insertAdjacentElement("afterend", panel);
+  }
+
+  panel.textContent = diagnosticLog.join("\n");
+}
+
 
 function setPill(text, active = false) {
   connectionStatus.classList.toggle("active", active);
@@ -362,6 +387,7 @@ function setupRecognition() {
   
   recognition.onstart = () => {
     recognitionRunning = true;
+    logDiagnostic("Recognition started");
     setStatus(
       mode === "wake"
         ? 'Microphone active. Say "Hey, Pmrg".'
@@ -374,6 +400,7 @@ function setupRecognition() {
     const message = "Speech error: " + event.error;
 
     console.error(message, event);
+    logDiagnostic("ERROR: " + event.error);
     setStatus(message);
 
     if (
@@ -395,6 +422,10 @@ function setupRecognition() {
     const startingMode = mode;
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
+      logDiagnostic(
+        "Heard: " + event.results[i][0].transcript +
+        " | final=" + event.results[i].isFinal
+      );
       const result = event.results[i];
       const transcript = result[0]?.transcript || "";
 
@@ -420,6 +451,7 @@ function setupRecognition() {
 
   
   recognition.onend = () => {
+    logDiagnostic("Recognition ended");
     recognitionRunning = false;
 
     if (wakeEnabled && !speaking && !busy) {
