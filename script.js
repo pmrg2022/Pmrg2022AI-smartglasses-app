@@ -236,6 +236,7 @@ function removeWakePhrase(text, match) {
   ).trim().replace(/^[,.\s!?-]+/, "");
 }
 
+
 function beginQuestion(initialText = "") {
   clearTimeout(silenceTimer);
 
@@ -251,21 +252,16 @@ function beginQuestion(initialText = "") {
   resizeInput();
 
   setPill("Listening", true);
-  setStatus("Listening for your question…");
+  setStatus("Wake phrase detected. Listening for your question…");
 
-  // Restart the engine in question-capture mode.
-  if (recognitionRunning) {
-    try {
-      recognition.stop();
-    } catch (_) {}
-  } else {
-    startEngine();
+  // Keep the current recognition session running.
+  // Do not stop and restart it here.
+
+  if (input.value.trim()) {
+    scheduleQuestionSend();
   }
-
-  // If the question was spoken in the same sentence as the wake phrase,
-  // give the user time to finish it.
-  if (input.value.trim()) scheduleQuestionSend();
 }
+
 
 function scheduleQuestionSend() {
   clearTimeout(silenceTimer);
@@ -300,6 +296,7 @@ function onWakeTranscript(text, isFinal) {
   beginQuestion(remainder);
 }
 
+
 function onQuestionTranscript(text, isFinal) {
   const transcript = text.trim();
   if (!transcript) return;
@@ -313,17 +310,23 @@ function onQuestionTranscript(text, isFinal) {
     input.value = questionParts.join(" ")
       .replace(/\s+/g, " ")
       .trim();
+
+    resizeInput();
+
+    // Only submit after a final result, never an interim fragment.
+    if (input.value.trim()) {
+      scheduleQuestionSend();
+    }
   } else {
-    // Show partial recognition while the user is speaking.
     input.value = [...questionParts, transcript]
       .join(" ")
       .replace(/\s+/g, " ")
       .trim();
-  }
 
-  resizeInput();
-  scheduleQuestionSend();
+    resizeInput();
+  }
 }
+
 
 function setupRecognition() {
   const SpeechRecognition =
@@ -379,25 +382,33 @@ function setupRecognition() {
     setStatus("Speech recognition error: " + event.error);
   };
 
+  
   recognition.onresult = event => {
+    const startingMode = mode;
+
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
+      const transcript = result[0]?.transcript || "";
 
-      // Check every returned alternative, not just the first.
-      for (let j = 0; j < result.length; j++) {
-        const transcript = result[j].transcript || "";
-        console.log("Recognized speech:", transcript);
+      if (!transcript.trim()) continue;
 
-        if (mode === "wake") {
-          onWakeTranscript(transcript, result.isFinal);
-        } else {
-          onQuestionTranscript(transcript, result.isFinal);
-        }
+      console.log("Recognized speech:", transcript, {
+        final: result.isFinal,
+        mode: startingMode
+      });
 
-        if (mode === "question") break;
+      if (startingMode === "wake") {
+        onWakeTranscript(transcript, result.isFinal);
+
+        // A wake phrase changed the mode. Do not treat other
+        // results in this same event as the user's question.
+        if (mode !== "wake") return;
+      } else {
+        onQuestionTranscript(transcript, result.isFinal);
       }
     }
   };
+
 
   recognition.onend = () => {
     recognitionRunning = false;
