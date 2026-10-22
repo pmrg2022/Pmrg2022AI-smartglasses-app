@@ -294,8 +294,9 @@ textarea::placeholder {
 }
 
 .icon-button.listening {
-  background: #57383c;
-  color: #ffd1d1;
+  background: #3c4a40;
+  color: #c4e4ce;
+  border: 1px solid #66836e;
 }
 
 .send-button {
@@ -402,4 +403,9 @@ svg {
   .footer > span {
     width: 100%;
   }
+}
+.image-logo {
+  width: 95%;
+  height: 95%;
+  border-radius: 30%;
 }
