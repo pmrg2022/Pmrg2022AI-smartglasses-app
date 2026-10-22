@@ -161,37 +161,24 @@ function toggleWakeMode() {
 // Match both the complete wake phrase and common ASR variants.
 // Short phrases are checked only against final results to reduce
 // accidental activation while a longer phrase is still being spoken.
+
 function findWake(text, isFinal) {
   const value = normalize(text);
   if (!value) return null;
 
+  // Every pattern MUST begin with "hey".
   const patterns = [
-    {
-      regex: /\bhey\s+pmrg\s+(?:2022|twenty twenty two|two zero two two)\s+ai\b/,
-      short: false
-    },
-    {
-      regex: /\bhey\s+pmrg\s+ai\b/,
-      short: false
-    },
-    {
-      regex: /\bpmrg\s+(?:2022|twenty twenty two|two zero two two)\s+ai\b/,
-      short: false
-    },
-    {
-      regex: /\bhey\s+pmrg\b/,
-      short: false
-    },
-    {
-      regex: /\bpm\b|\btwenty two\b|\bpmrg\b/,
-      short: true
-    }
+    /\bhey\s+pmrg\s+(?:2022|twenty twenty two|twenty two|two zero two two)\s+ai\b/,
+    /\bhey\s+pmrg\s+ai\b/,
+    /\bhey\s+pmrg\b/,
+    /\bhey\s+p\s*m\b/,
+    /\bhey\s+twenty\s+two\b/,
+    /\bhey\s+twenty\s+two\s+ai\b/
   ];
 
-  for (const item of patterns) {
-    const match = item.regex.exec(value);
-
-    if (match && (!item.short || isFinal)) {
+  for (const regex of patterns) {
+    const match = regex.exec(value);
+    if (match && (isFinal || match[0].length > 12)) {
       return {
         index: match.index,
         end: match.index + match[0].length
@@ -199,20 +186,45 @@ function findWake(text, isFinal) {
     }
   }
 
-  // Some recognizers return the brand as a single joined word.
+  // Handle "Hey PMRG2022AI" when the recognizer joins the words.
   const joined = value.replace(/\s/g, "");
-  const joinedPhrases = [
+  const joinedPatterns = [
     "heypmrg2022ai",
     "heypmrg2022",
-    "pmrg2022ai"
+    "heypmrgtwentytwentytwoai",
+    "heypmrgai",
+    "heypmrg",
+    "heypm",
+    "heytwentytwo"
   ];
 
-  if (joinedPhrases.some(phrase => joined.includes(phrase))) {
-    return { index: 0, end: value.length };
+  for (const phrase of joinedPatterns) {
+    const index = joined.indexOf(phrase);
+    if (index !== -1 && isFinal) {
+      // Map the joined-string position back to the original normalized text.
+      let count = 0;
+      let start = -1;
+      let end = -1;
+
+      for (let i = 0; i < value.length; i++) {
+        if (/\s/.test(value[i])) continue;
+        if (count === index) start = i;
+        if (count === index + phrase.length - 1) {
+          end = i + 1;
+          break;
+        }
+        count++;
+      }
+
+      if (start !== -1 && end !== -1) {
+        return { index: start, end };
+      }
+    }
   }
 
   return null;
 }
+
 
 function removeWakePhrase(text, match) {
   if (!match) return "";
@@ -335,25 +347,18 @@ function setupRecognition() {
   recognition.interimResults = true;
   recognition.maxAlternatives = 3;
 
+  
   recognition.onstart = () => {
     recognitionRunning = true;
-  };
-
-  recognition.onresult = event => {
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const result = event.results[i];
-      const transcript = result[0]?.transcript || "";
-
-      if (mode === "wake") {
-        onWakeTranscript(transcript, result.isFinal);
-      } else {
-        onQuestionTranscript(transcript, result.isFinal);
-      }
-    }
+    setStatus(
+      mode === "wake"
+        ? 'Microphone active. Say "Hey, Pmrg".'
+        : "Microphone active. Listening for your question…"
+    );
   };
 
   recognition.onerror = event => {
-    console.warn("Speech recognition error:", event.error);
+    console.error("Speech recognition error:", event.error);
 
     if (
       event.error === "not-allowed" ||
@@ -365,13 +370,32 @@ function setupRecognition() {
       micButton.setAttribute("aria-label", "Start wake listening");
       setPill("Permission needed");
       setStatus(
-        "Microphone permission was denied. Check Safari website settings."
+        "Safari denied speech recognition. Check microphone and " +
+        "speech-recognition permissions for this website."
       );
       return;
     }
 
-    if (event.error === "audio-capture") {
-      setStatus("No microphone available. Check your audio settings.");
+    setStatus("Speech recognition error: " + event.error);
+  };
+
+  recognition.onresult = event => {
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+
+      // Check every returned alternative, not just the first.
+      for (let j = 0; j < result.length; j++) {
+        const transcript = result[j].transcript || "";
+        console.log("Recognized speech:", transcript);
+
+        if (mode === "wake") {
+          onWakeTranscript(transcript, result.isFinal);
+        } else {
+          onQuestionTranscript(transcript, result.isFinal);
+        }
+
+        if (mode === "question") break;
+      }
     }
   };
 
@@ -379,9 +403,11 @@ function setupRecognition() {
     recognitionRunning = false;
 
     if (wakeEnabled && !speaking && !busy) {
+      setStatus("Recognition stopped. Restarting microphone…");
       scheduleRestart();
     }
   };
+
 }
 
 function speakAnswer(text, resumeWake = true) {
