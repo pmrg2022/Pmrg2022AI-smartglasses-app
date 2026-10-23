@@ -124,6 +124,7 @@ function startEngine() {
 }
 
 function scheduleRestart() {
+  logDiagnostic("Restart timer fired");
   if (!wakeEnabled || speaking || busy) {
     restartPending = true;
     return;
@@ -217,35 +218,33 @@ function toggleWakeMode() {
 // accidental activation while a longer phrase is still being spoken.
 
 
-function findWake(text, isFinal) {
-  const value = normalize(text);
-  if (!value) return null;
 
-  // Only activate from a final transcript. Interim results change
-  // repeatedly while Safari is still interpreting the audio.
+function findWake(text, isFinal) {
   if (!isFinal) return null;
 
+  const normalized = normalize(text);
+
   const patterns = [
-    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\s+(?:2022|twenty twenty two|twenty two|two zero two two)\s+ai\b/,
+    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\s+(?:2022|twenty twenty two|twenty two|two zero two two|22)\s+ai\b/,
     /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\s+ai\b/,
     /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\b/,
-    /\bhey\s+p\s*m\b/,
-    /\bhey\s+twenty\s+two\b/
+    /\bhey\s+p\s*\.?\s*m\s*\.?\b/,
+    /\bhey\s+(?:twenty\s+two|22|8\s*22|822)\b/
   ];
 
-  for (const regex of patterns) {
-    const match = regex.exec(value);
-
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
     if (match) {
       return {
-        index: match.index,
-        end: match.index + match[0].length
+        phrase: match[0],
+        index: match.index
       };
     }
   }
 
   return null;
 }
+
 
 
 
@@ -446,6 +445,10 @@ function setupRecognition() {
   recognition.onend = () => {
     recognitionRunning = false;
     logDiagnostic("Recognition ended");
+    logDiagnostic(
+      `Restart check: wakeEnabled=${wakeEnabled}, ` +
+      `speaking=${speaking}, busy=${busy}, mode=${mode}`
+    );
 
     if (!wakeEnabled) return;
 
