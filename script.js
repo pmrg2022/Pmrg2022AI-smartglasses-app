@@ -250,11 +250,14 @@ function findWake(text, isFinal) {
 function removeWakePhrase(text, match) {
   if (!match) return "";
 
-  return (
-    text.slice(0, match.index) +
-    " " +
-    text.slice(match.end)
-  ).trim().replace(/^[,.\s!?-]+/, "");
+  return text.replace(
+
+    /^\s*hey[\s,]+(?:p\s*\.?\s*m\s*\.?|p\s*m\s*r\s*g|pmrg|prg|p\s*m\s*g|twenty\s+two|22|822|8\s*22)\b[\s,.:;-]*/i,
+
+    ""
+
+  ).trim();
+
 }
 
 
@@ -303,17 +306,17 @@ function scheduleQuestionSend() {
   }, SILENCE_MS);
 }
 
-function onWakeTranscript(text, isFinal) {
-  const match = findWake(text, isFinal);
-  if (!match) return;
+function onWakeTranscript(text) {
+  const wake = findWake(text, true);
+  if (!wake) return;
 
   const now = Date.now();
   if (now - lastWakeAt < WAKE_COOLDOWN_MS) return;
-
   lastWakeAt = now;
 
-  const remainder = removeWakePhrase(text, match);
-  beginQuestion(remainder);
+  const question = removeWakePhrase(text);
+
+  beginQuestion(question);
 }
 
 
