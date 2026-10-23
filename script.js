@@ -22,6 +22,8 @@ let silenceTimer = null;
 let questionParts = [];
 let lastFinal = "";
 let lastWakeAt = 0;
+let restartPending = false;
+let restartAttempts = 0;
 
 const SILENCE_MS = 1300;
 const RESTART_MS = 400;
@@ -101,47 +103,65 @@ function clearTimers() {
 }
 
 
+
 function startEngine() {
-  if (!recognition || !wakeEnabled || speaking || busy ||
-      recognitionRunning) {
+  if (!recognition || !wakeEnabled || speaking || busy) return;
+
+  if (recognitionRunning) {
+    restartPending = true;
     return;
   }
 
+  restartPending = false;
+
   try {
     recognition.start();
-    setStatus("Starting speech recognition…");
   } catch (error) {
-    const detail = error.name || error.message || String(error);
-
-    console.error("Recognition start failed:", error);
-    setStatus("Could not start microphone: " + detail);
-
-    // Safari may still be closing the previous recognition session.
+    logDiagnostic("Start failed: " + error.name);
+    restartPending = true;
     scheduleRestart();
   }
 }
 
-
 function scheduleRestart() {
+  if (!wakeEnabled || speaking || busy) {
+    restartPending = true;
+    return;
+  }
+
+  restartPending = true;
   clearTimeout(restartTimer);
 
-  if (!wakeEnabled || speaking || busy) return;
+  const delay = Math.min(500 * (2 ** restartAttempts), 4000);
 
   restartTimer = setTimeout(() => {
     restartTimer = null;
+
+    if (!wakeEnabled || speaking || busy) return;
+
+    if (recognitionRunning) {
+      // Wait for onend to confirm Safari has stopped.
+      return;
+    }
+
+    restartPending = false;
     startEngine();
-  }, RESTART_MS);
+  }, delay);
 }
 
 function stopEngine() {
   clearTimeout(restartTimer);
+  restartTimer = null;
 
   if (recognition && recognitionRunning) {
     try {
       recognition.stop();
-    } catch (_) {}
+    } catch (error) {
+      logDiagnostic("Stop failed: " + error.name);
+    }
   }
 }
+
 
 function startWakeMode() {
   if (!supported) {
@@ -354,15 +374,18 @@ function setupRecognition() {
   recognition.maxAlternatives = 3;
 
   
+  
   recognition.onstart = () => {
     recognitionRunning = true;
+    restartAttempts = 0;
     logDiagnostic("Recognition started");
     setStatus(
       mode === "wake"
-        ? 'Microphone active. Say "Hey, Pmrg".'
-        : "Microphone active. Listening for your question…"
+        ? 'Listening for "Hey, Pmrg"…'
+        : "Listening for your question…"
     );
   };
+
 
   
   recognition.onerror = event => {
@@ -422,16 +445,18 @@ function setupRecognition() {
   
   recognition.onend = () => {
     recognitionRunning = false;
+    logDiagnostic("Recognition ended");
 
-    if (wakeEnabled && !speaking && !busy) {
-      setStatus("Recognition ended. Restarting…");
+    if (!wakeEnabled) return;
 
-      clearTimeout(restartTimer);
+    if (speaking || busy) {
+      restartPending = true;
+      return;
+    }
 
-      restartTimer = setTimeout(() => {
-        restartTimer = null;
-        startEngine();
-      }, 1000);
+    if (restartPending || mode === "wake") {
+      restartAttempts = Math.min(restartAttempts + 1, 3);
+      scheduleRestart();
     }
   };
 
@@ -469,8 +494,9 @@ function speakAnswer(text, resumeWake = true) {
     speaking = false;
 
     if (wakeEnabled && resumeWake) {
+      mode = "wake";
       setPill("Wake listening", true);
-      setStatus("Ready. Say your wake phrase when you need me.");
+      setStatus('Ready. Say "Hey, Pmrg" to talk.');
       scheduleRestart();
     } else {
       setPill("Ready");
@@ -555,8 +581,11 @@ async function sendMessage(messageOverride, resumeWake = false) {
     input.disabled = false;
 
     if (resumeWake && wakeEnabled) {
-      if (reply) speakAnswer(reply, true);
-      else scheduleRestart();
+      if (reply) {
+        speakAnswer(reply, true);
+      } else {
+        scheduleRestart();
+      }
     } else if (reply) {
       speakAnswer(reply, false);
     } else if (wakeEnabled) {
