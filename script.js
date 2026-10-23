@@ -299,7 +299,6 @@ function scheduleQuestionSend() {
     }
 
     mode = "wake";
-    stopEngine();
 
     sendMessage(message, true);
   }, SILENCE_MS);
