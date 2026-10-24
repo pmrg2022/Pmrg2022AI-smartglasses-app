@@ -479,6 +479,11 @@ function setupRecognition() {
 
 function speakAnswer(text, resumeWake = true) {
   logDiagnostic("speakAnswer called; text length=" + text.length);
+  logDiagnostic("speakAnswer called.");
+  logDiagnostic("Speech synthesis speaking: " +
+    window.speechSynthesis.speaking);
+  logDiagnostic("Speech synthesis pending: " +
+    window.speechSynthesis.pending);
   
   if (!text) {
     if (resumeWake && wakeEnabled) scheduleRestart();
@@ -532,7 +537,18 @@ function speakAnswer(text, resumeWake = true) {
     }
   };
 
+  logDiagnostic(
+    `Before speak(): speaking=${window.speechSynthesis.speaking}, ` +
+    `pending=${window.speechSynthesis.pending}, ` +
+    `voices=${window.speechSynthesis.getVoices().length}`
+  );
   window.speechSynthesis.speak(utterance);
+  setTimeout(() => {
+    logDiagnostic(
+      `After 2s: speaking=${window.speechSynthesis.speaking}, ` +
+      `pending=${window.speechSynthesis.pending}`
+    );
+  }, 2000);
 }
 
 async function sendMessage(messageOverride, resumeWake = false) {
