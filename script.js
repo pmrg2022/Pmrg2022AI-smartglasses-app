@@ -86,15 +86,9 @@ function loadSpeechVoices() {
   );
   if (availableVoices.length > 0 && !speechWarmupStarted) {
     speechWarmupStarted = true;
-
-    logDiagnostic("Voices loaded. Starting speech warm-up.");
-
-    resetSpeechEngine();
-
-    // Use a temporary answer without adding a chat message.
-    lastAnswer = "Hello, I am ready to talk.";
-    repeatLastAnswer();
-    lastAnswer = "";
+    logDiagnostic(
+      "Voices loaded. Waiting for user interaction to test speech."
+    );
   }
 }
 
