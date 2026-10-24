@@ -694,6 +694,10 @@ function speakAnswer(text, resumeWake = true) {
   };
 
   function queueSpeech() {
+    logDiagnostic("Cancelling previous speech before submission.");
+
+    window.speechSynthesis.cancel();
+
     logDiagnostic("Submitting utterance to speech engine.");
     window.speechSynthesis.speak(utterance);
   }
