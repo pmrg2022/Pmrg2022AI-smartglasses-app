@@ -45,6 +45,32 @@ function setStatus(text) {
   statusLine.textContent = text;
 }
 
+function testDelayedSpeech() {
+  const synth = window.speechSynthesis;
+  const utterance = new SpeechSynthesisUtterance(
+    "This is a delayed speech test."
+  );
+
+  utterance.onstart = () => {
+    logDiagnostic("DELAY TEST: speech started.");
+  };
+
+  utterance.onend = () => {
+    logDiagnostic("DELAY TEST: speech ended.");
+  };
+
+  utterance.onerror = (event) => {
+    logDiagnostic("DELAY TEST ERROR: " + event.error);
+  };
+
+  logDiagnostic("DELAY TEST: scheduling speech.");
+
+  setTimeout(() => {
+    logDiagnostic("DELAY TEST: calling speak().");
+    synth.speak(utterance);
+  }, 250);
+}
+
 function logDiagnostic(message) {
   const time = new Date().toLocaleTimeString();
   diagnosticLog.unshift(`${time} — ${message}`);
@@ -659,6 +685,7 @@ async function sendMessage(messageOverride, resumeWake = false) {
   }
 }
 
+
 // The microphone button toggles hands-free wake mode.
 micButton.addEventListener("click", toggleWakeMode);
 
@@ -708,6 +735,7 @@ document.getElementById("clear-button").addEventListener("click", () => {
   welcome.hidden = false;
   lastAnswer = "";
   setStatus("Conversation cleared.");
+  testDelayedSpeech();
 });
 
 document.querySelectorAll("[data-prompt]").forEach(button => {
