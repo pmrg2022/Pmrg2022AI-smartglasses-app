@@ -478,6 +478,8 @@ function setupRecognition() {
 }
 
 function speakAnswer(text, resumeWake = true) {
+  logDiagnostic("speakAnswer called; text length=" + text.length);
+  
   if (!text) {
     if (resumeWake && wakeEnabled) scheduleRestart();
     return;
@@ -489,6 +491,7 @@ function speakAnswer(text, resumeWake = true) {
     return;
   }
 
+  logDiagnostic("Submitting utterance to speech synthesis.");
   window.speechSynthesis.cancel();
   speaking = true;
 
@@ -602,13 +605,21 @@ async function sendMessage(messageOverride, resumeWake = false) {
     sendButton.disabled = false;
     input.disabled = false;
 
+    logDiagnostic(
+      `Playback decision: reply=${!!reply}, ` +
+      `resumeWake=${resumeWake}, wakeEnabled=${wakeEnabled}`
+    );
+
     if (resumeWake && wakeEnabled) {
       if (reply) {
+        logDiagnostic("Calling speakAnswer for voice response.");
         speakAnswer(reply, true);
       } else {
+        logDiagnostic("No reply; scheduling wake restart.");
         scheduleRestart();
       }
     } else if (reply) {
+      logDiagnostic("Calling speakAnswer for regular response.");
       speakAnswer(reply, false);
     } else if (wakeEnabled) {
       scheduleRestart();
