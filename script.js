@@ -89,6 +89,8 @@ function loadSpeechVoices() {
 
     logDiagnostic("Voices loaded. Starting speech warm-up.");
 
+    resetSpeechEngine();
+
     // Use a temporary answer without adding a chat message.
     lastAnswer = "Hello, I am ready to talk.";
     repeatLastAnswer();
@@ -843,11 +845,47 @@ input.addEventListener("keydown", event => {
 });
 
 function repeatLastAnswer() {
-  if (lastAnswer) {
-    speakAnswer(lastAnswer, wakeEnabled);
-  } else {
+  if (!lastAnswer) {
     setStatus("There isn't an answer to repeat yet.");
+    return;
   }
+
+  speakAnswer(lastAnswer, wakeEnabled);
+}
+
+function resetSpeechEngine() {
+  if (!("speechSynthesis" in window)) return;
+
+  const synth = window.speechSynthesis;
+
+  synth.cancel();
+
+  logDiagnostic("Speech engine reset.");
+
+  // Give Safari a moment to process cancellation before
+  // submitting a fresh utterance.
+  setTimeout(() => {
+    const test = new SpeechSynthesisUtterance(
+      "Hello, I am ready to talk."
+    );
+
+    test.lang = "en-US";
+
+    test.onstart = () => {
+      logDiagnostic("Warm-up speech started.");
+    };
+
+    test.onend = () => {
+      logDiagnostic("Warm-up speech finished.");
+    };
+
+    test.onerror = event => {
+      logDiagnostic("Warm-up speech error: " + event.error);
+    };
+
+    synth.speak(test);
+    logDiagnostic("Warm-up utterance submitted.");
+  }, 250);
 }
 
 document.getElementById("repeat-button").addEventListener(
