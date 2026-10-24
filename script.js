@@ -66,7 +66,13 @@ if ("speechSynthesis" in window) {
     "voiceschanged",
     loadSpeechVoices
   );
+
+  // Safari may populate its voice list after page startup.
+  setTimeout(loadSpeechVoices, 500);
+  setTimeout(loadSpeechVoices, 1500);
+  setTimeout(loadSpeechVoices, 3000);
 }
+
 
 
 // Normalize speech recognition output to make matching easier.
@@ -571,11 +577,6 @@ function speakAnswer(text, resumeWake = true) {
   utterance.lang = "en-US";
   utterance.rate = 1;
   utterance.pitch = 1;
-
-  const voices = synth.getVoices();
-  const englishVoice = voices.find(voice =>
-    voice.lang.toLowerCase().startsWith("en-us")
-  );
 
   // Refresh the voice list in case Safari loaded voices late.
   if (availableVoices.length === 0) {
