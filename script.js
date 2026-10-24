@@ -242,24 +242,21 @@ function toggleWakeMode() {
 // Match both the complete wake phrase and common ASR variants.
 // Short phrases are checked only against final results to reduce
 // accidental activation while a longer phrase is still being spoken.
-
-
-
 function findWake(text, isFinal) {
   if (!isFinal) return null;
 
   const normalized = normalize(text);
 
   const patterns = [
-    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\s+(?:2022|twenty twenty two|twenty two|two zero two two|22)\s+ai\b/,
-    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\s+ai\b/,
-    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg|p m r g)\b/,
+    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg)(?:\s*(?:2022|twenty\s+twenty\s+two|twenty\s+two|two\s+zero\s+two\s+two|22))?\s*ai\b/,
+    /\bhey\s+(?:p\s*m\s*r\s*g|pmrg|prg)\b/,
     /\bhey\s+p\s*\.?\s*m\s*\.?\b/,
     /\bhey\s+(?:twenty\s+two|22|8\s*22|822)\b/
   ];
 
   for (const pattern of patterns) {
     const match = normalized.match(pattern);
+
     if (match) {
       return {
         phrase: match[0],
@@ -271,22 +268,27 @@ function findWake(text, isFinal) {
   return null;
 }
 
-
-
-
 function removeWakePhrase(text, match) {
-  if (!match) return "";
+  if (!match) return text.trim();
 
-  return text.replace(
+  const patterns = [
+    /^\s*hey[\s,]+(?:p\s*\.?\s*m\s*\.?\s*r\s*\.?\s*g|pmrg|prg)(?:[\s,]*(?:2022|twenty[\s-]+twenty[\s-]+two|twenty[\s-]+two|two[\s-]+zero[\s-]+two[\s-]+two|22))?(?:[\s,]*ai)?\b[\s,.:;-]*/i,
 
-    /^\s*hey[\s,]+(?:p\s*\.?\s*m\s*\.?|p\s*m\s*r\s*g|pmrg|prg|p\s*m\s*g|twenty\s+two|22|822|8\s*22)\b[\s,.:;-]*/i,
+    /^\s*hey[\s,]+p\s*\.?\s*m\s*\.?\b[\s,.:;-]*/i,
 
-    ""
+    /^\s*hey[\s,]+(?:twenty[\s-]+two|22|8\s*22|822)\b[\s,.:;-]*/i
+  ];
 
-  ).trim();
+  for (const pattern of patterns) {
+    const cleaned = text.replace(pattern, "").trim();
 
+    if (cleaned !== text.trim()) {
+      return cleaned;
+    }
+  }
+
+  return text.trim();
 }
-
 
 function beginQuestion(initialText = "") {
   clearTimeout(silenceTimer);
@@ -333,8 +335,8 @@ function scheduleQuestionSend() {
   }, SILENCE_MS);
 }
 
-function onWakeTranscript(text) {
-  const wake = findWake(text, true);
+function onWakeTranscript(text, isFinal) {
+  const wake = findWake(text, isFinal);
   if (!wake) return;
 
   const now = Date.now();
@@ -342,10 +344,8 @@ function onWakeTranscript(text) {
   lastWakeAt = now;
 
   const question = removeWakePhrase(text, wake);
-
   beginQuestion(question);
 }
-
 
 function onQuestionTranscript(text, isFinal) {
   const transcript = text.trim();
