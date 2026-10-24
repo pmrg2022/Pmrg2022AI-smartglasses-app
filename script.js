@@ -29,6 +29,8 @@ const SILENCE_MS = 1300;
 const RESTART_MS = 400;
 const WAKE_COOLDOWN_MS = 1800;
 
+const diagnosticLog = [];
+
 let availableVoices = [];
 let selectedVoice = null;
 
@@ -83,9 +85,6 @@ function normalize(text) {
     .replace(/\s+/g, " ")
     .trim();
 }
-
-
-const diagnosticLog = [];
 
 function setStatus(text) {
   statusLine.textContent = text;
@@ -781,7 +780,6 @@ document.getElementById("clear-button").addEventListener("click", () => {
   welcome.hidden = false;
   lastAnswer = "";
   setStatus("Conversation cleared.");
-  testDelayedSpeech();
 });
 
 document.querySelectorAll("[data-prompt]").forEach(button => {
