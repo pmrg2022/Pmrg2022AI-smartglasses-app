@@ -57,6 +57,7 @@ const diagnosticLog = [];
 
 let availableVoices = [];
 let selectedVoice = null;
+let speechWarmupStarted = false;
 
 function loadSpeechVoices() {
   if (!("speechSynthesis" in window)) {
@@ -83,6 +84,16 @@ function loadSpeechVoices() {
     `Voices loaded: ${availableVoices.length}; ` +
     `selected=${selectedVoice ? selectedVoice.name : "default"}`
   );
+  if (availableVoices.length > 0 && !speechWarmupStarted) {
+    speechWarmupStarted = true;
+
+    logDiagnostic("Voices loaded. Starting speech warm-up.");
+
+    // Use a temporary answer without adding a chat message.
+    lastAnswer = "Hello, I am ready to talk.";
+    repeatLastAnswer();
+    lastAnswer = "";
+  }
 }
 
 if ("speechSynthesis" in window) {
@@ -831,10 +842,18 @@ input.addEventListener("keydown", event => {
   }
 });
 
-document.getElementById("repeat-button").addEventListener("click", () => {
-  if (lastAnswer) speakAnswer(lastAnswer, wakeEnabled);
-  else setStatus("There isn't an answer to repeat yet.");
-});
+function repeatLastAnswer() {
+  if (lastAnswer) {
+    speakAnswer(lastAnswer, wakeEnabled);
+  } else {
+    setStatus("There isn't an answer to repeat yet.");
+  }
+}
+
+document.getElementById("repeat-button").addEventListener(
+  "click",
+  repeatLastAnswer
+);
 
 document.getElementById("stop-button").addEventListener("click", () => {
   if ("speechSynthesis" in window) {
