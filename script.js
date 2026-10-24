@@ -572,6 +572,11 @@ function speakAnswer(text, resumeWake = true) {
   utterance.rate = 1;
   utterance.pitch = 1;
 
+  const voices = synth.getVoices();
+  const englishVoice = voices.find(voice =>
+    voice.lang.toLowerCase().startsWith("en-us")
+  );
+
   // Refresh the voice list in case Safari loaded voices late.
   if (availableVoices.length === 0) {
     loadSpeechVoices();
