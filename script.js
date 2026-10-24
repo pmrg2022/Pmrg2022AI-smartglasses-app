@@ -23,6 +23,7 @@ let lastFinal = "";
 let lastWakeAt = 0;
 let restartPending = false;
 let restartAttempts = 0;
+let transcriptPaused = false;
 
 const SILENCE_MS = 1300;
 const RESTART_MS = 400;
@@ -411,6 +412,14 @@ function setupRecognition() {
 
   
   recognition.onresult = event => {
+    if (transcriptPaused || speaking || busy) {
+
+      logDiagnostic("Transcript ignored: AI is busy or speaking.");
+
+      return;
+
+    }
+
     const startingMode = mode;
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -482,7 +491,6 @@ function speakAnswer(text, resumeWake = true) {
 
   window.speechSynthesis.cancel();
   speaking = true;
-  stopEngine();
 
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
@@ -496,6 +504,7 @@ function speakAnswer(text, resumeWake = true) {
 
   utterance.onend = () => {
     speaking = false;
+    transcriptPaused = false;
 
     if (wakeEnabled && resumeWake) {
       mode = "wake";
@@ -510,7 +519,11 @@ function speakAnswer(text, resumeWake = true) {
 
   utterance.onerror = () => {
     speaking = false;
-    if (wakeEnabled && resumeWake) scheduleRestart();
+    transcriptPaused = false;
+
+    if (wakeEnabled && resumeWake) {
+      scheduleRestart();
+    }
   };
 
   window.speechSynthesis.speak(utterance);
@@ -534,6 +547,8 @@ async function sendMessage(messageOverride, resumeWake = false) {
   const typingDiv = addMessage("Thinking…", "ai");
 
   busy = true;
+  transcriptPaused = true;
+
   sendButton.disabled = true;
   input.disabled = true;
   setStatus("Contacting Pmrg2022AI…");
