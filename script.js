@@ -497,13 +497,29 @@ function speakAnswer(text, resumeWake = true) {
   }
 
   logDiagnostic("Submitting utterance to speech synthesis.");
-  window.speechSynthesis.cancel();
+  const synth = window.speechSynthesis;
+
+  logDiagnostic("Cancelling previous speech.");
+  synth.cancel();
+
   speaking = true;
 
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
   utterance.rate = 1;
   utterance.pitch = 1;
+
+  const voices = synth.getVoices();
+  const englishVoice = voices.find(voice =>
+    voice.lang.toLowerCase().startsWith("en-us")
+  );
+
+  if (englishVoice) {
+    utterance.voice = englishVoice;
+    logDiagnostic("Selected voice: " + englishVoice.name);
+  } else {
+    logDiagnostic("No en-US voice found; using default.");
+  }
 
   utterance.onstart = () => {
     logDiagnostic("Speech started successfully.");
@@ -528,7 +544,7 @@ function speakAnswer(text, resumeWake = true) {
   };
 
   utterance.onerror = event => {
-    logDiagnostic("Speech error: " + event.error);
+    logDiagnostic("Speech ERROR: " + event.error);
     speaking = false;
     transcriptPaused = false;
 
