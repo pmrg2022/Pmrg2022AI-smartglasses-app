@@ -498,11 +498,13 @@ function speakAnswer(text, resumeWake = true) {
   utterance.pitch = 1;
 
   utterance.onstart = () => {
+    logDiagnostic("Speech started successfully.");
     setPill("Speaking", true);
     setStatus("Pmrg2022AI is speaking…");
   };
 
   utterance.onend = () => {
+    logDiagnostic("Speech finished.");
     speaking = false;
     transcriptPaused = false;
 
@@ -517,7 +519,8 @@ function speakAnswer(text, resumeWake = true) {
     }
   };
 
-  utterance.onerror = () => {
+  utterance.onerror = event => {
+    logDiagnostic("Speech error: " + event.error);
     speaking = false;
     transcriptPaused = false;
 
