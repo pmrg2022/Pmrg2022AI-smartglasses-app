@@ -672,4 +672,30 @@ document.querySelectorAll("[data-prompt]").forEach(button => {
   });
 });
 
+document.getElementById("repeat-button").addEventListener(
+  "dblclick",
+  () => {
+    const test = new SpeechSynthesisUtterance(
+      "Hello. This is a speech playback test."
+    );
+
+    test.onstart = () => {
+      logDiagnostic("TEST speech started");
+    };
+
+    test.onend = () => {
+      logDiagnostic("TEST speech ended");
+    };
+
+    test.onerror = event => {
+      logDiagnostic("TEST speech error: " + event.error);
+    };
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(test);
+
+    logDiagnostic("TEST speech queued");
+  }
+);
+
 setupRecognition();
