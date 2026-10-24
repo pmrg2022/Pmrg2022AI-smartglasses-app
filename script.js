@@ -315,7 +315,7 @@ function onWakeTranscript(text) {
   if (now - lastWakeAt < WAKE_COOLDOWN_MS) return;
   lastWakeAt = now;
 
-  const question = removeWakePhrase(text);
+  const question = removeWakePhrase(text, wake);
 
   beginQuestion(question);
 }
@@ -496,11 +496,8 @@ function speakAnswer(text, resumeWake = true) {
     return;
   }
 
-  logDiagnostic("Submitting utterance to speech synthesis.");
+  logDiagnostic("Preparing speech without cancelling.");
   const synth = window.speechSynthesis;
-
-  logDiagnostic("Cancelling previous speech.");
-  synth.cancel();
 
   speaking = true;
 
