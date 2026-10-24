@@ -650,9 +650,61 @@ function speakAnswer(text, resumeWake = true) {
     `pending=${window.speechSynthesis.pending}, ` +
     `voices=${window.speechSynthesis.getVoices().length}`
   );
-  setTimeout(() => {
-    logDiagnostic("Executing delayed speech request.");
+  let speechStarted = false;
+  let speechRetried = false;
+
+  utterance.onstart = () => {
+    speechStarted = true;
+    logDiagnostic("Speech started successfully.");
+    setPill("Speaking", true);
+    setStatus("Pmrg2022AI is speaking…");
+  };
+
+  utterance.onend = () => {
+    logDiagnostic("Speech finished.");
+    speaking = false;
+    transcriptPaused = false;
+
+    if (wakeEnabled && resumeWake) {
+      mode = "wake";
+      setPill("Wake listening", true);
+      setStatus('Ready. Say "Hey, Pmrg" to talk.');
+      scheduleRestart();
+    } else {
+      setPill("Ready");
+      setStatus("Ready.");
+    }
+  };
+
+  utterance.onerror = event => {
+    logDiagnostic("Speech ERROR: " + event.error);
+    speaking = false;
+    transcriptPaused = false;
+
+    if (wakeEnabled && resumeWake) {
+      scheduleRestart();
+    }
+  };
+
+  function queueSpeech() {
+    logDiagnostic("Submitting utterance to speech engine.");
     window.speechSynthesis.speak(utterance);
+  }
+  setTimeout(() => {
+    queueSpeech();
+
+    setTimeout(() => {
+      if (
+        !speechStarted &&
+        !speechRetried &&
+        !window.speechSynthesis.speaking &&
+        !window.speechSynthesis.pending
+      ) {
+        speechRetried = true;
+        logDiagnostic("Speech did not start; retrying once.");
+        queueSpeech();
+      }
+    }, 1500);
   }, 250);
   setTimeout(() => {
     logDiagnostic(
