@@ -1,3 +1,27 @@
+console.log("Pmrg2022AI: script started");
+
+window.addEventListener("error", function (event) {
+  const status = document.getElementById("status-line");
+
+  if (status) {
+    status.textContent =
+      "JavaScript error: " + event.message;
+  }
+
+  console.error("Pmrg2022AI error:", event.message);
+});
+
+window.addEventListener("unhandledrejection", function (event) {
+  const status = document.getElementById("status-line");
+
+  if (status) {
+    status.textContent =
+      "Async error: " + String(event.reason);
+  }
+
+  console.error("Pmrg2022AI async error:", event.reason);
+});
+
 const API_URL = "https://ai-custom-hosting.onrender.com/chat";
 
 const chatContainer = document.getElementById("chat-container");
