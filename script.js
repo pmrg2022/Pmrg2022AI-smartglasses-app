@@ -555,7 +555,10 @@ function speakAnswer(text, resumeWake = true) {
     `pending=${window.speechSynthesis.pending}, ` +
     `voices=${window.speechSynthesis.getVoices().length}`
   );
-  window.speechSynthesis.speak(utterance);
+  setTimeout(() => {
+    logDiagnostic("Executing delayed speech request.");
+    window.speechSynthesis.speak(utterance);
+  }, 250);
   setTimeout(() => {
     logDiagnostic(
       `After 2s: speaking=${window.speechSynthesis.speaking}, ` +
