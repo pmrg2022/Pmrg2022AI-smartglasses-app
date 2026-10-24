@@ -29,6 +29,46 @@ const SILENCE_MS = 1300;
 const RESTART_MS = 400;
 const WAKE_COOLDOWN_MS = 1800;
 
+let availableVoices = [];
+let selectedVoice = null;
+
+function loadSpeechVoices() {
+  if (!("speechSynthesis" in window)) {
+    logDiagnostic("Speech synthesis unavailable.");
+    return;
+  }
+
+  const synth = window.speechSynthesis;
+  availableVoices = synth.getVoices();
+
+  selectedVoice =
+    availableVoices.find(voice =>
+      voice.lang.toLowerCase() === "en-us"
+    ) ||
+    availableVoices.find(voice =>
+      voice.lang.toLowerCase().startsWith("en-us")
+    ) ||
+    availableVoices.find(voice =>
+      voice.lang.toLowerCase().startsWith("en")
+    ) ||
+    null;
+
+  logDiagnostic(
+    `Voices loaded: ${availableVoices.length}; ` +
+    `selected=${selectedVoice ? selectedVoice.name : "default"}`
+  );
+}
+
+if ("speechSynthesis" in window) {
+  loadSpeechVoices();
+
+  window.speechSynthesis.addEventListener(
+    "voiceschanged",
+    loadSpeechVoices
+  );
+}
+
+
 // Normalize speech recognition output to make matching easier.
 function normalize(text) {
   return text.toLowerCase()
@@ -532,16 +572,16 @@ function speakAnswer(text, resumeWake = true) {
   utterance.rate = 1;
   utterance.pitch = 1;
 
-  const voices = synth.getVoices();
-  const englishVoice = voices.find(voice =>
-    voice.lang.toLowerCase().startsWith("en-us")
-  );
+  // Refresh the voice list in case Safari loaded voices late.
+  if (availableVoices.length === 0) {
+    loadSpeechVoices();
+  }
 
-  if (englishVoice) {
-    utterance.voice = englishVoice;
-    logDiagnostic("Selected voice: " + englishVoice.name);
+  if (selectedVoice) {
+    utterance.voice = selectedVoice;
+    logDiagnostic("Selected voice: " + selectedVoice.name);
   } else {
-    logDiagnostic("No en-US voice found; using default.");
+    logDiagnostic("No English voice ready; using system default.");
   }
 
   utterance.onstart = () => {
